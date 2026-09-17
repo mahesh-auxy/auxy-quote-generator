@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auxy Deal Calculator</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="auxy-quote-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --canvas:#ffffff;
+  --paper:#ffffff;
+  --paper-2:#faf8f4;
+  --band:#f4eee3;
+  --rule:#ded7c9;
+  --rule-soft:#ebe5da;
+  --ink:#15140f;
+  --ink-2:#38342a;
+  --muted:#645e4e;
+  --faint:#8d8573;
+  --accent:#9a5b22;
+  --accent-2:#b87334;
+  --wash:#fdf4e7;
+  --green:#2c7247;
+  --green-wash:#eef6f1;
+  --red:#a8332a;
+  --red-wash:#fdf0ef;
+  --ring:0 0 0 3px rgba(154,91,34,.16);
+  --lift:0 1px 2px rgba(21,20,15,.04), 0 8px 24px -14px rgba(21,20,15,.14);
+  --lift-lg:0 2px 4px rgba(21,20,15,.05), 0 20px 48px -20px rgba(21,20,15,.26);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --ease:cubic-bezier(.32,.72,.35,1);
+}
+
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--canvas); color:var(--ink);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:14px; line-height:1.55;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+@media(max-width:1120px){ body{padding-bottom:78px} }
+
+.sheet{max-width:1320px;margin:0 auto;padding:0 32px 90px}
+@media(max-width:640px){.sheet{padding:0 20px 90px}}
+
+/* numerals */
+.tab-num,.fig,.q-total,.q-val,.dl-v,.pk-vol,.mobar-v,input[type=number]{
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1
+}
+:focus-visible{outline:none;box-shadow:var(--ring);border-radius:8px}
+
+/* ═══════════ MASTHEAD ═══════════ */
+.mast{padding:52px 0 0}
+.mast-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:end;padding-bottom:30px}
+@media(max-width:820px){.mast-grid{grid-template-columns:1fr;gap:28px;align-items:start}}
+.kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+.mast h1{
+  font-family:var(--serif);font-weight:600;
+  font-size:clamp(38px,5.4vw,62px);line-height:.98;letter-spacing:-.025em;
+  margin:16px 0 0;
+}
+.mast .lede{margin-top:18px;max-width:46ch;font-size:15px;color:var(--muted);line-height:1.6}
+
+/* cadence — editorial switch, no pill */
+.cad{display:flex;gap:26px;align-items:flex-end}
+.cad button{
+  font-family:var(--serif);font-size:16px;font-weight:500;letter-spacing:-.01em;
+  background:none;border:none;color:var(--faint);cursor:pointer;padding:0 0 9px;
+  border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s var(--ease),border-color .2s var(--ease);
+}
+.cad button:hover:not(.on){color:var(--ink-2)}
+.cad button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.cad-note{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:11px;letter-spacing:.04em}
+@media(max-width:820px){.cad-note{text-align:left}}
+
+.mast-rule{border:none;border-top:1px solid var(--ink);opacity:.82}
+
+/* ═══════════ TABS ═══════════ */
+.tabs{display:flex;gap:0;margin:0 0 44px;border-bottom:1px solid var(--rule)}
+.tabs button{
+  font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.01em;
+  color:var(--muted);background:none;border:none;padding:15px 22px;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s var(--ease);
+}
+.tabs button:first-child{padding-left:0}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
+.panel{display:none}
+.panel.on{display:block;animation:rise .3s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ═══════════ WORK AREA ═══════════ */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:56px;align-items:start}
+@media(max-width:1120px){.work{grid-template-columns:1fr;gap:38px}}
+
+/* ═══════════ SECTIONS ═══════════ */
+.sec{padding:0 0 46px}
+.sec.off{display:none}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:9px}
+.sec-n{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--accent);flex-shrink:0;padding-top:2px}
+.sec-head h2{font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.018em;flex-shrink:0;line-height:1.2}
+.sec-line{flex:1;border-bottom:1px solid var(--rule);transform:translateY(-6px);min-width:16px}
+.sec-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);flex-shrink:0;white-space:nowrap}
+.sec-meta.alarm{color:var(--red)}
+.sec-note{color:var(--muted);font-size:13.5px;max-width:66ch;margin:0 0 26px;padding-left:34px;line-height:1.6}
+@media(max-width:640px){
+  .sec-note{padding-left:0}
+  .sec-head{flex-wrap:wrap;gap:10px}
+  .sec-line{display:none}
+}
+
+.sub-h{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.012em;margin-bottom:5px}
+.hair{border:none;border-top:1px solid var(--rule-soft);margin:32px 0}
+
+/* ═══════════ PRODUCT ROWS ═══════════ */
+.prods{display:grid;gap:9px}
+.prod{
+  display:flex;align-items:center;gap:16px;width:100%;text-align:left;font-family:inherit;cursor:pointer;
+  background:var(--paper);border:1px solid var(--rule-soft);border-left:3px solid transparent;
+  border-radius:4px;padding:17px 20px;transition:all .2s var(--ease);
+}
+.prod:hover{border-color:var(--rule);border-left-color:var(--accent-2);background:var(--paper-2)}
+.prod.on{background:var(--wash);border-color:var(--rule);border-left-color:var(--accent)}
+.prod-tick{
+  width:19px;height:19px;border:1.5px solid var(--rule);border-radius:3px;flex-shrink:0;
+  display:grid;place-items:center;font-size:11px;color:transparent;background:var(--paper);transition:all .2s var(--ease);
+}
+.prod.on .prod-tick{background:var(--accent);border-color:var(--accent);color:#fff}
+.prod-body{flex:1;min-width:0;display:block}
+.prod-name{display:block;font-size:15px;font-weight:600;letter-spacing:-.008em}
+.prod-desc{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.prod-rate{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.prod.on .prod-rate{color:var(--accent)}
+
+/* ═══════════ PACKAGE CARDS ═══════════ */
+.pks{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);border-radius:5px;overflow:hidden}
+@media(max-width:900px){.pks{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.pks{grid-template-columns:1fr}}
+.pk{
+  position:relative;text-align:left;font-family:inherit;cursor:pointer;
+  background:var(--paper);border:none;padding:22px 19px 20px;
+  transition:background .2s var(--ease);
+}
+.pk::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:transparent;transition:background .2s var(--ease)}
+.pk:hover{background:var(--paper-2)}
+.pk.on{background:var(--wash)}
+.pk.on::before{background:var(--accent)}
+.pk-name{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
+.pk.on .pk-name{color:var(--accent)}
+.pk-star{color:var(--accent-2);font-size:9px}
+.pk-vol{font-family:var(--serif);font-size:31px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-top:13px}
+.pk-unit{font-size:11.5px;color:var(--muted);margin-top:5px}
+.pk-figs{margin-top:17px;padding-top:14px;border-top:1px solid var(--rule-soft);display:grid;gap:7px}
+.pk-custom{margin-top:17px;padding-top:14px;border-top:1px solid var(--rule-soft);font-family:var(--mono);font-size:10.5px;color:var(--faint);line-height:1.6}
+
+/* dot-leader rows */
+.dl{display:flex;align-items:baseline;gap:7px;font-size:12px}
+.dl-k{color:var(--muted);white-space:nowrap}
+.dl-lead{flex:1;border-bottom:1px dotted var(--rule);transform:translateY(-3px);min-width:10px}
+.dl-v{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);white-space:nowrap;font-weight:500}
+.dl.strong .dl-k{color:var(--ink-2)}
+.dl.strong .dl-v{color:var(--ink)}
+
+/* ═══════════ FIELDS ═══════════ */
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(224px,1fr));gap:26px}
+.f-label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.f-wrap{position:relative;display:flex;align-items:center}
+input[type=number],input[type=text],input[type=email],textarea{
+  width:100%;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);
+  background:var(--paper);border:1px solid var(--rule);border-radius:4px;
+  padding:12px 14px;outline:none;transition:border-color .2s var(--ease),box-shadow .2s var(--ease),background .2s;
+}
+input::placeholder,textarea::placeholder{font-weight:400;color:var(--faint)}
+input:focus,textarea:focus{border-color:var(--accent);box-shadow:var(--ring)}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+.f-suffix{position:absolute;right:14px;font-family:var(--mono);font-size:11px;color:var(--faint);pointer-events:none}
+.f-wrap.suffixed input{padding-right:70px}
+.f-hint{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
+
+/* spec list */
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:11px 40px}
+@media(max-width:560px){.specs{grid-template-columns:1fr}}
+.specs .dl{font-size:13px}
+.specs .dl-v{font-size:12.5px;color:var(--ink)}
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn{
+  font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--ink-2);
+  background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:11px 17px;cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.btn:hover{border-color:var(--ink);color:var(--ink);background:var(--paper-2)}
+.btn.solid{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn.solid:hover{background:#000;border-color:#000;color:#fff}
+.btn.lg{font-size:13.5px;padding:15px 22px;width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.quiet{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);background:none;border:none;cursor:pointer;padding:3px 0;
+  border-bottom:1px solid var(--rule);transition:all .18s var(--ease);
+}
+.quiet:hover{color:var(--red);border-bottom-color:var(--red)}
+.quiet[hidden]{display:none}
+
+/* ═══════════ LINE ITEMS (add-ons / broadcast) ═══════════ */
+.items{border-top:1px solid var(--rule-soft)}
+.item{
+  display:flex;align-items:center;gap:22px;padding:18px 16px 18px 13px;
+  border-bottom:1px solid var(--rule-soft);border-left:3px solid transparent;
+  transition:all .2s var(--ease);
+}
+.item:hover{background:var(--paper-2)}
+.item.on{background:var(--wash);border-left-color:var(--accent)}
+.item-body{flex:1;min-width:0}
+.item-name{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.item-desc{font-size:11.5px;color:var(--faint);margin-top:4px;line-height:1.5;max-width:56ch}
+.item.on .item-desc{color:var(--muted)}
+.item-price{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:right;white-space:nowrap;line-height:1.6;flex-shrink:0}
+.item-price b{display:block;color:var(--ink-2);font-weight:500;font-size:13px}
+.step{display:flex;align-items:center;border:1px solid var(--rule);border-radius:4px;overflow:hidden;flex-shrink:0;background:var(--paper)}
+.item.on .step{border-color:var(--accent-2)}
+.step button{font-family:var(--mono);font-size:15px;color:var(--muted);background:none;border:none;width:34px;height:40px;cursor:pointer;transition:all .15s}
+.step button:hover{background:var(--band);color:var(--accent)}
+.step input{width:54px;border:none;border-left:1px solid var(--rule-soft);border-right:1px solid var(--rule-soft);border-radius:0;text-align:center;font-family:var(--mono);font-size:13.5px;padding:11px 2px;font-weight:500}
+.step input:focus{box-shadow:none;border-color:var(--rule-soft)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin-bottom:22px}
+.seg button{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;background:var(--paper);border:none;padding:10px 16px;cursor:pointer;color:var(--muted);transition:all .2s var(--ease)}
+.seg button+button{border-left:1px solid var(--rule-soft)}
+.seg button.on{background:var(--ink);color:var(--paper)}
+
+/* ═══════════ CALLOUTS ═══════════ */
+.call{display:flex;gap:13px;align-items:flex-start;padding:16px 18px;font-size:12.5px;line-height:1.6;margin-top:24px;border-left:2px solid}
+.call b{font-weight:600}
+.call .m{font-family:var(--mono);font-size:11px;flex-shrink:0;line-height:1.7;letter-spacing:.06em}
+.call.info{background:var(--paper-2);border-left-color:var(--accent-2);color:var(--ink-2)}
+.call.warn{background:var(--red-wash);border-left-color:var(--red);color:#7e2820}
+.call.good{background:var(--green-wash);border-left-color:var(--green);color:#1f5434}
+
+/* ═══════════ QUOTE PANEL ═══════════ */
+.quote{position:sticky;top:26px}
+.q-card{background:var(--paper);border:1px solid var(--rule-soft);border-radius:6px;overflow:hidden;box-shadow:var(--lift-lg)}
+.q-head{background:var(--ink);color:var(--paper);padding:26px 26px 24px}
+.q-eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,254,251,.46)}
+.q-total{font-family:var(--serif);font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1;margin-top:11px}
+.q-ref{font-family:var(--mono);font-size:10.5px;color:rgba(255,254,251,.44);margin-top:11px;letter-spacing:.03em}
+.q-bar{display:flex;height:4px;margin-top:18px;border-radius:2px;overflow:hidden;background:rgba(255,254,251,.12)}
+.q-bar span{display:block;height:100%}
+.q-bar .s1{background:var(--accent-2)}
+.q-bar .s2{background:#8a8472}
+.q-bar .s3{background:#5d5849}
+.q-tags{display:flex;flex-wrap:wrap;gap:6px;padding:15px 26px;background:var(--paper-2);border-bottom:1px solid var(--rule-soft)}
+.q-tags:empty{display:none}
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);border:1px solid var(--rule);border-radius:3px;padding:4px 9px;background:var(--paper)}
+.q-body{padding:24px 26px}
+.q-sec{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:24px 0 13px;display:flex;align-items:center;gap:11px}
+.q-sec::after{content:"";flex:1;border-bottom:1px solid var(--rule-soft)}
+.q-sec:first-child{margin-top:0}
+.q-line{display:flex;justify-content:space-between;gap:18px;padding:7px 0;align-items:baseline;font-size:12.5px}
+.q-line .k{color:var(--ink-2);min-width:0;line-height:1.45}
+.q-line .k small{display:block;font-size:10.5px;color:var(--faint);margin-top:3px;font-weight:400;line-height:1.5}
+.q-val{font-family:var(--mono);font-size:12px;color:var(--ink);white-space:nowrap;font-weight:500}
+.q-line.sum{border-top:1px solid var(--rule-soft);margin-top:14px;padding-top:15px}
+.q-line.sum .k{font-weight:600;color:var(--ink)}
+.q-line.tot{border-top:1.5px solid var(--ink);margin-top:14px;padding-top:16px;align-items:baseline}
+.q-line.tot .k{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.q-line.tot .q-val{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:-.025em}
+.q-empty{color:var(--faint);font-size:12.5px;font-style:italic;font-family:var(--serif);padding:12px 0}
+.q-eff{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:22px;background:var(--rule-soft);border:1px solid var(--rule-soft);border-radius:4px;overflow:hidden}
+.q-eff:has(>:only-child){grid-template-columns:1fr}
+.q-eff-c{background:var(--paper-2);padding:13px 15px}
+.q-eff-v{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink)}
+.q-eff-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:4px}
+.q-foot{border-top:1px solid var(--rule-soft);padding:18px 26px;background:var(--paper-2)}
+
+/* ═══════════ MOBILE BAR ═══════════ */
+.mobar{display:none}
+@media(max-width:1120px){
+  .mobar{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    align-items:center;justify-content:space-between;gap:18px;
+    background:var(--ink);color:var(--paper);padding:14px 22px;
+    box-shadow:0 -8px 30px -12px rgba(21,20,15,.5);
+  }
+  body.on-email .mobar{display:none}
+  .mobar-k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,254,251,.45)}
+  .mobar-v{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:-.028em;line-height:1.2}
+  .mobar .btn{background:transparent;border-color:rgba(255,254,251,.26);color:var(--paper)}
+  .mobar .btn:hover{background:rgba(255,254,251,.1);border-color:rgba(255,254,251,.45);color:#fff}
+}
+
+/* ═══════════ EMAIL ═══════════ */
+.mail{display:grid;grid-template-columns:380px minmax(0,1fr);gap:56px;align-items:start}
+@media(max-width:1020px){.mail{grid-template-columns:1fr;gap:38px}}
+.stack{display:grid;gap:19px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.duo{grid-template-columns:1fr}}
+.opt{
+  display:flex;align-items:flex-start;gap:13px;cursor:pointer;padding:14px 16px;
+  background:var(--paper);border:1px solid var(--rule-soft);border-left:3px solid transparent;
+  border-radius:4px;transition:all .2s var(--ease);
+}
+.opt:hover{border-color:var(--rule);background:var(--paper-2)}
+.opt:has(input:checked){background:var(--wash);border-color:var(--rule);border-left-color:var(--accent)}
+.opt input{width:16px;height:16px;margin-top:2px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+.opt>span{display:block;min-width:0}
+.opt-t{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.005em}
+.opt-d{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.mail-paper{
+  background:var(--paper);border:1px solid var(--rule);border-radius:6px;
+  padding:30px 32px;box-shadow:var(--lift);
+}
+@media(max-width:560px){.mail-paper{padding:22px 20px}}
+#emailBody{
+  font-family:var(--mono);font-size:12px;font-weight:400;line-height:1.85;
+  min-height:680px;resize:vertical;white-space:pre-wrap;border:none;padding:0;
+  background:transparent;border-radius:0;
+}
+#emailBody:focus{box-shadow:none}
+.mail-divide{border:none;border-top:1px solid var(--rule-soft);margin:22px 0}
+.mail-state{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:14px;line-height:1.6;letter-spacing:.02em}
+
+/* ═══════════ MISC ═══════════ */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--ink);color:var(--paper);font-size:13px;font-weight:500;
+  padding:14px 24px;border-radius:5px;opacity:0;pointer-events:none;
+  transition:opacity .24s var(--ease),transform .24s var(--ease);z-index:99;box-shadow:var(--lift-lg);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:1120px){.toast{bottom:88px}}
+
+.colophon{
+  margin-top:20px;padding-top:26px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;line-height:1.95;color:var(--faint);letter-spacing:.02em;
+  max-width:96ch;
+}
+
+/* narrow-screen row wrapping */
+@media(max-width:430px){
+  .prod{flex-wrap:wrap;row-gap:10px}
+  .prod-rate{flex-basis:100%;text-align:right;padding-left:35px}
+}
+@media(max-width:560px){
+  .item{flex-wrap:wrap;row-gap:14px;padding-right:13px}
+  .item-body{flex:1 1 100%}
+  .item-price{text-align:left;flex:1 1 auto}
+  .item .f-wrap{width:100% !important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+@media print{
+  body{background:#fff;padding:0;font-size:10.5px}
+  .sheet{max-width:none;padding:0}
+  .tabs,.cad,.btn,.btn-row,.step button,.mobar,.quiet,.q-foot,.toast,.seg{display:none !important}
+  .work{grid-template-columns:1fr 290px;gap:26px}
+  .quote{position:static}
+  .q-card,.mail-paper{box-shadow:none}
+  .q-head{background:#fff;color:#000;border-bottom:1.5px solid #000}
+  .q-eyebrow,.q-ref{color:#666}
+  .q-bar{display:none}
+  .sec{padding-bottom:22px;break-inside:avoid}
+  .pk:not(.on){opacity:.4}
+  .item:not(.on){display:none}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="mast">
+    <div class="mast-grid">
+      <div>
+        <div class="kicker">Rate card V7 · India · INR, excluding GST</div>
+        <h1>Auxy Deal<br>Calculator</h1>
+        <p class="lede">One rate per product, the same at every package. Telephony, the AI stack, integrations and support are all inside the number — there is nothing billed on top.</p>
+      </div>
+      <div>
+        <div class="cad" id="cad">
+          <button type="button" data-c="qtr" class="on">Billed quarterly</button>
+          <button type="button" data-c="ann">Billed annually</button>
+        </div>
+        <div class="cad-note" id="cadNote"></div>
+      </div>
+    </div>
+    <hr class="mast-rule">
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button type="button" data-t="calc" class="on">Calculator</button>
+    <button type="button" data-t="email">Email generator</button>
+  </nav>
+
+  <!-- ══════════════ CALCULATOR ══════════════ -->
+  <div class="panel on" id="panel-calc">
+    <div class="work">
+      <div>
+
+        <section class="sec" data-sec>
+          <div class="sec-head"><span class="sec-n"></span><h2>Products</h2><span class="sec-line"></span></div>
+          <p class="sec-note">Pick what the engagement covers. Voice and Chat each carry their own package and allowance; WhatsApp broadcast is a Meta pass-through that sits outside the conversation rate.</p>
+          <div class="prods" id="prods">
+            <button type="button" class="prod on" data-p="voice">
+              <span class="prod-tick">✓</span>
+              <span class="prod-body"><span class="prod-name">Voice AI</span><span class="prod-desc">Inbound and outbound, telephony included</span></span>
+              <span class="prod-rate">₹9.00 / min</span>
+            </button>
+            <button type="button" class="prod" data-p="chat">
+              <span class="prod-tick">✓</span>
+              <span class="prod-body"><span class="prod-name">Chat AI</span><span class="prod-desc">Website and WhatsApp on one rate</span></span>
+              <span class="prod-rate">₹32.00 / conv</span>
+            </button>
+            <button type="button" class="prod" data-p="bcast">
+              <span class="prod-tick">✓</span>
+              <span class="prod-body"><span class="prod-name">WhatsApp Broadcast</span><span class="prod-desc">Outbound template sends, Meta rates at cost</span></span>
+              <span class="prod-rate">pass-through</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="sec" id="s-voice" data-sec>
+          <div class="sec-head"><span class="sec-n"></span><h2>Voice AI</h2><span class="sec-line"></span><span class="sec-meta" id="voiceTag"></span></div>
+          <p class="sec-note">Inbound and outbound bill at the same rate. Every package includes its own concurrency — telephony and AI together, one line, no separate SIP trunk and no carrier bill to manage.</p>
+
+          <div class="pks" id="voicePks"></div>
+
+          <hr class="hair">
+
+          <div class="fields">
+            <div>
+              <label class="f-label" for="voiceVol">Committed volume</label>
+              <div class="f-wrap suffixed"><input type="number" id="voiceVol" min="0" step="100" value="5000"><span class="f-suffix">min / mo</span></div>
+              <div class="f-hint" id="voiceVolHint"></div>
+            </div>
+            <div>
+              <label class="f-label" for="voiceUse">Expected actual usage</label>
+              <div class="f-wrap suffixed"><input type="number" id="voiceUse" min="0" step="100" value="5000"><span class="f-suffix">min / mo</span></div>
+              <div class="f-hint">Anything past the allowance bills at the same ₹9.00 — no premium overage rate.</div>
+            </div>
+          </div>
+
+          <hr class="hair">
+          <div class="sub-h">What the package includes</div>
+          <p class="sec-note" style="padding-left:0;margin-bottom:18px">Everything below is inside the per-minute rate.</p>
+          <div class="specs" id="voiceSpecs"></div>
+
+          <hr class="hair">
+          <div class="sub-h">Concurrency sizing</div>
+          <p class="sec-note" style="padding-left:0;margin-bottom:22px">Concurrency sets how fast a list gets worked, not how many minutes are available.</p>
+          <div class="fields">
+            <div>
+              <label class="f-label" for="peakCalls">Peak calls per hour</label>
+              <div class="f-wrap suffixed"><input type="number" id="peakCalls" min="0" step="5" value="45"><span class="f-suffix">calls / hr</span></div>
+            </div>
+            <div>
+              <label class="f-label" for="avgLen">Average call length</label>
+              <div class="f-wrap suffixed"><input type="number" id="avgLen" min="0.5" step="0.5" value="4"><span class="f-suffix">min</span></div>
+            </div>
+          </div>
+          <div class="call info" id="concCall"><span class="m">→</span><span></span></div>
+        </section>
+
+        <section class="sec off" id="s-chat" data-sec>
+          <div class="sec-head"><span class="sec-n"></span><h2>Chat AI</h2><span class="sec-line"></span><span class="sec-meta" id="chatTag"></span></div>
+          <p class="sec-note">Website and WhatsApp on one rate. A conversation is a 24-hour window with one contact, billed only once it reaches six or more total messages — a visitor who opens the widget, reads a greeting and leaves is never billed.</p>
+
+          <div class="pks" id="chatPks"></div>
+
+          <hr class="hair">
+
+          <div class="fields">
+            <div>
+              <label class="f-label" for="chatVol">Committed volume</label>
+              <div class="f-wrap suffixed"><input type="number" id="chatVol" min="0" step="100" value="2000"><span class="f-suffix">conv / mo</span></div>
+              <div class="f-hint" id="chatVolHint"></div>
+            </div>
+            <div>
+              <label class="f-label" for="chatUse">Expected actual usage</label>
+              <div class="f-wrap suffixed"><input type="number" id="chatUse" min="0" step="100" value="2000"><span class="f-suffix">conv / mo</span></div>
+              <div class="f-hint">Overage bills at the same ₹32.00, with no premium rate.</div>
+            </div>
+          </div>
+
+          <hr class="hair">
+          <div class="sub-h">What the package includes</div>
+          <p class="sec-note" style="padding-left:0;margin-bottom:18px">Everything below is inside the per-conversation rate.</p>
+          <div class="specs" id="chatSpecs"></div>
+        </section>
+
+        <section class="sec off" id="s-bcast" data-sec>
+          <div class="sec-head"><span class="sec-n"></span><h2>WhatsApp broadcast</h2><span class="sec-line"></span><button type="button" class="quiet" id="clearBcast" hidden>Clear</button></div>
+          <p class="sec-note">Outbound template sends, billed per message at Meta's own template charge. These sit outside the per-conversation rate and are only incurred when a broadcast runs.</p>
+          <div class="items" id="bcastItems"></div>
+        </section>
+
+        <section class="sec" data-sec>
+          <div class="sec-head"><span class="sec-n"></span><h2>Add-ons</h2><span class="sec-line"></span><span class="sec-meta" id="addonTag"></span><button type="button" class="quiet" id="resetAddons" hidden>Reset</button></div>
+          <p class="sec-note">Optional, and only ever added by agreement. Every add-on starts at zero. They invoice on the account's existing quarterly or annual cycle, alongside the plan — never as a separate monthly charge.</p>
+          <div class="seg" id="concMode">
+            <button type="button" data-m="bundled" class="on">Concurrency — bundled</button>
+            <button type="button" data-m="byot">BYOT</button>
+          </div>
+          <div class="items" id="addonItems"></div>
+        </section>
+
+      </div>
+
+      <aside class="quote">
+        <div class="q-card">
+          <div class="q-head">
+            <div class="q-eyebrow">Invoice total · incl. GST</div>
+            <div class="q-total" id="qTotal">₹0</div>
+            <div class="q-ref" id="qRef"></div>
+            <div class="q-bar" id="qBar"></div>
+          </div>
+          <div class="q-tags" id="qTags"></div>
+          <div class="q-body" id="qBody"></div>
+          <div class="q-foot">
+            <div class="btn-row">
+              <button type="button" class="btn solid" id="copyQuote" style="flex:1">Copy quote summary</button>
+              <button type="button" class="btn" id="printBtn">Print</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ══════════════ EMAIL ══════════════ -->
+  <div class="panel" id="panel-email">
+    <div class="mail">
+      <div>
+        <section class="sec" style="padding-bottom:40px">
+          <div class="sec-head"><span class="sec-n">01</span><h2>Client</h2><span class="sec-line"></span></div>
+          <p class="sec-note" style="padding-left:0;margin-bottom:24px">The draft is built from whatever the Calculator tab currently holds.</p>
+          <div class="stack">
+            <div class="duo">
+              <div><label class="f-label" for="clientName">Client name</label><div class="f-wrap"><input type="text" id="clientName" placeholder="Sarah Kapoor"></div></div>
+              <div><label class="f-label" for="companyName">Company</label><div class="f-wrap"><input type="text" id="companyName" placeholder="Northwind Retail"></div></div>
+            </div>
+            <div><label class="f-label" for="clientEmail">Client email · optional</label><div class="f-wrap"><input type="email" id="clientEmail" placeholder="sarah@northwind.com"></div></div>
+            <div class="duo">
+              <div><label class="f-label" for="repName">Your name</label><div class="f-wrap"><input type="text" id="repName" value="Ajinkya"></div></div>
+              <div><label class="f-label" for="repEmail">Your email</label><div class="f-wrap"><input type="email" id="repEmail" value="ajinkyav@auxy.ai"></div></div>
+            </div>
+            <div><label class="f-label" for="docsLink">Docs link · optional</label><div class="f-wrap"><input type="text" id="docsLink" placeholder="https://docs.auxy.ai"></div></div>
+            <div><label class="f-label" for="trustLink">Trust Center link · optional</label><div class="f-wrap"><input type="text" id="trustLink" placeholder="https://trust.auxy.ai"></div></div>
+          </div>
+        </section>
+
+        <section class="sec" style="padding-bottom:0">
+          <div class="sec-head"><span class="sec-n">02</span><h2>Sections</h2><span class="sec-line"></span></div>
+          <p class="sec-note" style="padding-left:0;margin-bottom:22px">Untick anything this client does not need.</p>
+          <div class="stack">
+            <label class="opt"><input type="checkbox" id="optMetering" checked><span><span class="opt-t">How usage is counted</span><span class="opt-d">The short-call bands and the six-message threshold, spelled out.</span></span></label>
+            <label class="opt"><input type="checkbox" id="optPilot" checked><span><span class="opt-t">Pilot offer</span><span class="opt-d">100 free voice minutes and 50 free conversations across a 14-day pilot.</span></span></label>
+            <label class="opt"><input type="checkbox" id="optSummary" checked><span><span class="opt-t">Pricing summary</span><span class="opt-d">Subtotal, GST and the total for the term.</span></span></label>
+            <label class="opt"><input type="checkbox" id="optIncluded" checked><span><span class="opt-t">What's included</span><span class="opt-d">The platform paragraph, with no separate implementation fee.</span></span></label>
+            <label class="opt"><input type="checkbox" id="optBehaviour" checked><span><span class="opt-t">How the plan behaves</span><span class="opt-d">Carry-forward of unused volume and overage at the same rate.</span></span></label>
+          </div>
+          <button type="button" class="btn solid lg" id="generateBtn" style="margin-top:24px">Generate email</button>
+          <div class="mail-state" id="mailState"></div>
+        </section>
+      </div>
+
+      <section class="sec" style="padding-bottom:0">
+        <div class="sec-head"><span class="sec-n">03</span><h2>Draft</h2><span class="sec-line"></span><span class="sec-meta" id="mailCad"></span></div>
+        <div class="mail-paper">
+          <label class="f-label" for="emailSubject">Subject</label>
+          <div class="f-wrap"><input type="text" id="emailSubject" placeholder="Click Generate email"></div>
+          <hr class="mail-divide">
+          <textarea id="emailBody" placeholder="Your generated email will appear here — edit it freely before sending."></textarea>
+        </div>
+        <div class="btn-row" style="margin-top:20px">
+          <button type="button" class="btn solid" id="copyEmail">Copy email</button>
+          <button type="button" class="btn" id="mailtoBtn">Open in mail client</button>
+          <button type="button" class="btn" id="regenBtn">Regenerate</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="colophon">
+    All prices in INR and exclusive of 18% GST · plans bill quarterly or annually, never monthly<br>
+    Annual pays twelve months and runs thirteen — an effective ₹8.31 per minute and ₹29.54 per conversation<br>
+    Overage bills at the plan rate · unused volume carries forward within the term · minimum engagement ₹40,500 per quarter<br>
+    WhatsApp template fees are charged by Meta and passed through at cost — they are not part of the per-conversation rate<br>
+    Auxy AI · Voice AI &amp; Chat AI rate card V7
+  </div>
+</div>
+
+<div class="mobar">
+  <div><div class="mobar-k" id="mobarK"></div><div class="mobar-v" id="mobarV">₹0</div></div>
+  <button type="button" class="btn" id="mobarBtn">Breakdown</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══════════ V7 RATE CARD ═══════════ */
+
+var GST = 0.18;
+var MIN_ENGAGEMENT_QTR = 40500;
+var RATE = { voice:9.00, chat:32.00 };
+
+var PKG = {
+  voice: {
+    unit:'min', unitLong:'minutes / month', word:'minute', short:'min',
+    list:[
+      { k:'biz', name:'Business',   vol:1500,  conc:1,  agents:3,  actions:5,  storage:'20 MB' },
+      { k:'grw', name:'Growth',     vol:5000,  conc:3,  agents:5,  actions:10, storage:'40 MB', sold:true },
+      { k:'scl', name:'Scale',      vol:10000, conc:5,  agents:10, actions:20, storage:'60 MB', waived:true },
+      { k:'ent', name:'Enterprise', vol:20000, conc:10, agents:'Custom', actions:'Custom', storage:'Custom', waived:true, ent:true }
+    ]
+  },
+  chat: {
+    unit:'conv', unitLong:'conversations / month', word:'conversation', short:'conv',
+    list:[
+      { k:'biz', name:'Business',   vol:500,   agents:3,  actions:5,  storage:'20 MB' },
+      { k:'grw', name:'Growth',     vol:2000,  agents:5,  actions:10, storage:'40 MB', sold:true },
+      { k:'scl', name:'Scale',      vol:5000,  agents:10, actions:20, storage:'60 MB', waived:true },
+      { k:'ent', name:'Enterprise', vol:10000, agents:'Custom', actions:'Custom', storage:'Custom', waived:true, ent:true }
+    ]
+  }
+};
+
+var ADDONS = [
+  { id:'conc',      name:'AI Concurrency slot', desc:'One additional concurrent call. Bundled carries telephony and AI in one number and includes a phone number; BYOT is AI compute only.', unit:'slot', dynamic:true },
+  { id:'phone',     name:'Additional phone number', desc:'A branded India number beyond those included with the plan’s concurrency, sharing the same concurrency pool.', unit:'number', price:299 },
+  { id:'agent',     name:'Extra agent seat', desc:'One more configured voice or chat agent beyond the plan’s inclusion.', unit:'agent', price:1000 },
+  { id:'action',    name:'Extra action', desc:'One more tool or integration slot beyond the plan’s inclusion.', unit:'action', price:399 },
+  { id:'kb',        name:'Knowledge Base bundle', desc:'10 GB of documents and 1 GB of vector index together — roughly 25% below buying the two lines separately.', unit:'bundle', price:1499 },
+  { id:'kbDocs',    name:'Knowledge Base — documents only', desc:'10 GB of document storage and processing, for accounts scaling a library independently of retrieval.', unit:'10 GB', price:999 },
+  { id:'kbVectors', name:'Knowledge Base — vectors only', desc:'1 GB of vector index in fast-retrieval storage, for scaling retrieval independently of library size.', unit:'1 GB', price:999 }
+];
+var CONC_PRICE = { bundled:999, byot:499 };
+
+var BCAST = [
+  { id:'utility',   name:'Utility',   desc:'Order updates, reminders, alerts',      price:0.14 },
+  { id:'marketing', name:'Marketing', desc:'Promotions, offers, re-engagement',     price:0.8631 },
+  { id:'carousel',  name:'Carousel',  desc:'Multi-card product or offer templates', price:1.02 }
+];
+
+/* ═══════════ STATE ═══════════ */
+
+var ZERO_ADDONS = { conc:0, phone:0, agent:0, action:0, kb:0, kbDocs:0, kbVectors:0 };
+var ZERO_BCAST  = { utility:0, marketing:0, carousel:0 };
+
+var S = {
+  tab:'calc', cadence:'qtr',
+  on:{ voice:true, chat:false, bcast:false },
+  pkg:{ voice:'grw', chat:'grw' },
+  vol:{ voice:5000, chat:2000 },
+  use:{ voice:5000, chat:2000 },
+  concMode:'bundled',
+  addons: Object.assign({}, ZERO_ADDONS),
+  bcast:  Object.assign({}, ZERO_BCAST),
+  peakCalls:45, avgLen:4
+};
+var emailDirty = false;
+
+/* ═══════════ HELPERS ═══════════ */
+
+function inr(n){ return '₹' + Math.round(n||0).toLocaleString('en-IN'); }
+function dec(n,d){ d=d===undefined?2:d; return (isFinite(n)?n:0).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function num(n){ return Math.round(n||0).toLocaleString('en-IN'); }
+function $(id){ return document.getElementById(id); }
+function qs(s){ return document.querySelector(s); }
+function qsa(s){ return [].slice.call(document.querySelectorAll(s)); }
+function val(id){ var e=$(id); return e ? e.value.trim() : ''; }
+function checked(id){ var e=$(id); return !!(e && e.checked); }
+function pkgOf(p){ var k=S.pkg[p], l=PKG[p].list, i; for(i=0;i<l.length;i++) if(l[i].k===k) return l[i]; return l[0]; }
+function rateOf(p){ return RATE[p]; }
+function activeKeys(){ return ['voice','chat'].filter(function(p){ return S.on[p]; }); }
+function addonCount(){ var n=0; ADDONS.forEach(function(a){ if((S.addons[a.id]||0)>0) n++; }); return n; }
+function bcastCount(){ var n=0; BCAST.forEach(function(b){ if((S.bcast[b.id]||0)>0) n++; }); return n; }
+function dl(k,v,strong){ return '<div class="dl' + (strong?' strong':'') + '"><span class="dl-k">' + k + '</span><span class="dl-lead"></span><span class="dl-v">' + v + '</span></div>'; }
+
+/* Quarterly: pay 3, serve 3. Annual: pay 12, serve 13. */
+function term(){
+  return S.cadence==='qtr'
+    ? { paid:3,  served:3,  billed:'Billed quarterly', adverb:'quarterly', noun:'quarter', figKey:'Quarterly' }
+    : { paid:12, served:13, billed:'Billed annually',  adverb:'annually',  noun:'year',    figKey:'Annual · 13 mo' };
+}
+
+/* ═══════════ COMPUTE ═══════════ */
+
+function compute(){
+  var t = term(), lines = [], productNet = 0, addonNet = 0, bcastNet = 0;
+  var totalVol = { voice:0, chat:0 }, totalSpend = { voice:0, chat:0 }, detail = {};
+
+  ['voice','chat'].forEach(function(p){
+    if(!S.on[p]) return;
+    var pk = pkgOf(p), rate = rateOf(p), cfg = PKG[p];
+    var committed = S.vol[p] || 0;
+    var planCost  = committed * rate * t.paid;
+    var allowance = committed * t.served;
+    var used      = (S.use[p] || 0) * t.served;
+    var overUnits = Math.max(0, used - allowance);
+    var overCost  = overUnits * rate;
+
+    productNet += planCost + overCost;
+    totalVol[p] = Math.max(used, allowance);
+    totalSpend[p] = planCost + overCost;
+    detail[p] = { pk:pk, cfg:cfg, rate:rate, committed:committed, planCost:planCost,
+                  allowance:allowance, overUnits:overUnits, overCost:overCost };
+
+    lines.push({ type:'plan',
+      label:(p==='voice'?'Voice AI':'Chat AI') + ' — ' + pk.name,
+      sub: num(committed) + ' ' + cfg.unitLong + ' × ' + t.paid + ' mo @ ₹' + dec(rate),
+      amount: planCost });
+
+    if(overUnits > 0) lines.push({ type:'over',
+      label:'└ Overage',
+      sub: num(overUnits) + ' ' + cfg.unit + ' past the ' + num(allowance) + ' ' + cfg.unit + ' allowance, same rate',
+      amount: overCost });
+  });
+
+  var addonDetail = [];
+  ADDONS.forEach(function(a){
+    var qty = S.addons[a.id] || 0;
+    if(qty <= 0) return;
+    var price = a.dynamic ? CONC_PRICE[S.concMode] : a.price;
+    var amt = qty * price * t.paid;
+    addonNet += amt;
+    var label = a.name + (a.dynamic ? ' — ' + (S.concMode==='bundled'?'bundled':'BYOT') : '');
+    addonDetail.push({ label:label, qty:qty, price:price, unit:a.unit, amount:amt });
+    lines.push({ type:'addon', label:label,
+      sub: qty + ' × ₹' + num(price) + ' / ' + a.unit + ' / mo × ' + t.paid + ' mo', amount: amt });
+  });
+
+  var bcastDetail = [];
+  if(S.on.bcast){
+    BCAST.forEach(function(b){
+      var qty = S.bcast[b.id] || 0;
+      if(qty <= 0) return;
+      var amt = qty * b.price * t.paid;
+      bcastNet += amt;
+      bcastDetail.push({ name:b.name, qty:qty, price:b.price, amount:amt });
+      lines.push({ type:'bcast', label:'Broadcast — ' + b.name,
+        sub: num(qty) + ' sends / mo @ ₹' + dec(b.price,4) + ' × ' + t.paid + ' mo', amount: amt });
+    });
+  }
+
+  var net = productNet + addonNet + bcastNet;
+  var gst = net * GST;
+  var grand = net + gst;
+  var qtrEquiv = S.cadence==='qtr' ? net : net / 4;
+
+  var eff = {};
+  ['voice','chat'].forEach(function(p){
+    eff[p] = (S.on[p] && totalVol[p] > 0) ? totalSpend[p] / totalVol[p] : null;
+  });
+
+  return { t:t, lines:lines, detail:detail, addonDetail:addonDetail, bcastDetail:bcastDetail,
+           productNet:productNet, addonNet:addonNet, bcastNet:bcastNet,
+           net:net, gst:gst, grand:grand, qtrEquiv:qtrEquiv, eff:eff };
+}
+
+/* ═══════════ RENDER ═══════════ */
+
+function renderSecNumbers(){
+  var n = 0;
+  qsa('#panel-calc [data-sec]').forEach(function(s){
+    if(s.classList.contains('off')){ s.querySelector('.sec-n').textContent = ''; return; }
+    n++;
+    s.querySelector('.sec-n').textContent = (n < 10 ? '0' : '') + n;
+  });
+}
+
+function renderProds(){
+  qsa('#prods .prod').forEach(function(c){ c.classList.toggle('on', !!S.on[c.dataset.p]); });
+  $('s-voice').classList.toggle('off', !S.on.voice);
+  $('s-chat').classList.toggle('off',  !S.on.chat);
+  $('s-bcast').classList.toggle('off', !S.on.bcast);
+  renderSecNumbers();
+}
+
+function renderPks(p){
+  var host = $(p==='voice'?'voicePks':'chatPks'), cfg = PKG[p], t = term();
+  host.innerHTML = cfg.list.map(function(pk){
+    var rate = RATE[p];
+    var figs = pk.ent
+      ? '<div class="pk-custom">Talk to sales<br>Annual commitment</div>'
+      : '<div class="pk-figs">' + dl('Per month', inr(pk.vol * rate)) + dl(t.figKey, inr(pk.vol * rate * t.paid), true) + '</div>';
+    return '<button type="button" class="pk' + (S.pkg[p]===pk.k?' on':'') + '" data-p="' + p + '" data-k="' + pk.k + '">' +
+      '<div class="pk-name">' + pk.name + (pk.sold ? '<span class="pk-star">★</span>' : '') + '</div>' +
+      '<div class="pk-vol">' + num(pk.vol) + (pk.ent?'+':'') + '</div>' +
+      '<div class="pk-unit">' + cfg.unitLong + '</div>' + figs + '</button>';
+  }).join('');
+}
+
+function renderSpecs(p){
+  var pk = pkgOf(p), rows = [];
+  if(p==='voice') rows.push(['Concurrent calls', pk.conc + (pk.ent?'+':'')]);
+  rows.push([(p==='voice'?'Voice':'Chat') + ' agents', pk.agents]);
+  rows.push(['Configured actions', pk.actions]);
+  rows.push(['Storage', pk.storage]);
+  if(p==='voice'){
+    rows.push(['Telephony', 'Inbound & outbound']);
+    rows.push(['Call recordings', 'Included']);
+  } else {
+    rows.push(['Channels', 'Website & WhatsApp']);
+    rows.push(['Chat history', 'Lifetime']);
+  }
+  rows.push(['API & webhooks', 'All included']);
+  rows.push(['Implementation', pk.waived ? 'Waived' : 'By scope']);
+  $(p==='voice'?'voiceSpecs':'chatSpecs').innerHTML = rows.map(function(r){ return dl(r[0], r[1]); }).join('');
+}
+
+function renderHints(){
+  var t = term();
+  ['voice','chat'].forEach(function(p){
+    var el = $(p==='voice'?'voiceVolHint':'chatVolHint');
+    if(!el) return;
+    el.textContent = num((S.vol[p]||0) * t.served) + ' ' + PKG[p].unit + ' across the term' +
+      (S.cadence==='ann' ? ' (12 months paid, 13 served).' : '.') + ' Unused volume carries forward within the term.';
+  });
+}
+
+function renderTags(){
+  ['voice','chat'].forEach(function(p){
+    $(p==='voice'?'voiceTag':'chatTag').textContent = 'Flat ₹' + dec(rateOf(p)) + ' / ' + PKG[p].short;
+  });
+}
+
+function renderConc(){
+  var need = Math.ceil((S.peakCalls * S.avgLen) / 60) || 0;
+  var pk = pkgOf('voice');
+  var included = pk.conc + (S.addons.conc || 0);
+  var perHour = included > 0 ? Math.floor(included * 60 / (S.avgLen||1)) : 0;
+  var gap = need - included, el = $('concCall');
+  var msg = '<b>' + need + ' concurrent line' + (need===1?'':'s') + '</b> needed at ' + dec(S.avgLen,1) +
+            '-minute average calls. The ' + pk.name + ' package plus add-ons gives <b>' + included +
+            '</b>, clearing about <b>' + num(perHour) + ' calls an hour</b> — ' + num(perHour*8) + ' in an eight-hour day.';
+  if(gap > 0){
+    msg += ' Short by <b>' + gap + '</b>. Add ' + gap + ' concurrency slot' + (gap===1?'':'s') + ' below.';
+    el.className = 'call warn'; el.querySelector('.m').textContent = '!';
+  } else { el.className = 'call info'; el.querySelector('.m').textContent = '→'; }
+  el.querySelector('span:last-child').innerHTML = msg;
+}
+
+function renderAddons(){
+  qsa('#concMode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m === S.concMode); });
+  $('addonItems').innerHTML = ADDONS.map(function(a){
+    var price = a.dynamic ? CONC_PRICE[S.concMode] : a.price;
+    var qty = S.addons[a.id] || 0;
+    return '<div class="item' + (qty>0?' on':'') + '">' +
+      '<div class="item-body"><div class="item-name">' + a.name + '</div><div class="item-desc">' + a.desc + '</div></div>' +
+      '<div class="item-price"><b>₹' + num(price) + '</b>per ' + a.unit + ' / mo</div>' +
+      '<div class="step"><button type="button" data-step="-1" data-id="' + a.id + '" aria-label="Decrease">−</button>' +
+      '<input type="number" min="0" step="1" value="' + qty + '" data-addon="' + a.id + '" aria-label="' + a.name + ' quantity">' +
+      '<button type="button" data-step="1" data-id="' + a.id + '" aria-label="Increase">+</button></div></div>';
+  }).join('');
+  syncAddonHead();
+}
+
+function syncAddonHead(){
+  var n = addonCount();
+  $('addonTag').textContent = n === 0 ? 'None selected' : (n === 1 ? '1 selected' : n + ' selected');
+  $('resetAddons').hidden = n === 0;
+}
+
+function renderBcast(){
+  $('bcastItems').innerHTML = BCAST.map(function(b){
+    var qty = S.bcast[b.id] || 0;
+    return '<div class="item' + (qty>0?' on':'') + '">' +
+      '<div class="item-body"><div class="item-name">' + b.name + '</div><div class="item-desc">' + b.desc + '</div></div>' +
+      '<div class="item-price"><b>₹' + dec(b.price,4) + '</b>per send</div>' +
+      '<div class="f-wrap suffixed" style="width:168px;flex-shrink:0">' +
+      '<input type="number" min="0" step="1000" value="' + qty + '" data-bcast="' + b.id + '" aria-label="' + b.name + ' sends">' +
+      '<span class="f-suffix">/ mo</span></div></div>';
+  }).join('');
+  $('clearBcast').hidden = bcastCount() === 0;
+}
+
+function renderQuote(r){
+  var t = r.t;
+  $('qTotal').textContent = inr(r.grand);
+  $('qRef').textContent = r.net > 0
+    ? t.billed + ' · ' + inr(r.grand / t.paid) + ' a month, for reference'
+    : t.billed;
+  $('cadNote').textContent = S.cadence==='qtr'
+    ? '3-month term · ₹9.00 / ₹32.00'
+    : '12 paid, 13 served · ₹8.31 / ₹29.54';
+  $('mailCad').textContent = t.billed;
+  $('mobarV').textContent = inr(r.grand);
+  $('mobarK').textContent = t.billed + ' · incl. GST';
+
+  // composition bar
+  var segs = [];
+  if(r.net > 0){
+    if(r.productNet > 0) segs.push('<span class="s1" style="width:' + (r.productNet/r.net*100) + '%"></span>');
+    if(r.addonNet   > 0) segs.push('<span class="s2" style="width:' + (r.addonNet/r.net*100)   + '%"></span>');
+    if(r.bcastNet   > 0) segs.push('<span class="s3" style="width:' + (r.bcastNet/r.net*100)   + '%"></span>');
+  }
+  $('qBar').innerHTML = segs.length > 1 ? segs.join('') : '';
+  $('qBar').style.display = segs.length > 1 ? 'flex' : 'none';
+
+  var tags = [];
+  activeKeys().forEach(function(p){ tags.push('<span class="tag">' + (p==='voice'?'Voice':'Chat') + ' · ' + pkgOf(p).name + '</span>'); });
+  if(r.addonDetail.length) tags.push('<span class="tag">' + r.addonDetail.length + ' add-on' + (r.addonDetail.length===1?'':'s') + '</span>');
+  if(r.bcastDetail.length) tags.push('<span class="tag">Broadcast</span>');
+  $('qTags').innerHTML = tags.join('');
+
+  var h = '';
+  function block(title, list){
+    if(!list.length) return;
+    h += '<div class="q-sec">' + title + '</div>';
+    list.forEach(function(l){
+      h += '<div class="q-line"><span class="k">' + l.label + '<small>' + l.sub + '</small></span><span class="q-val">' + inr(l.amount) + '</span></div>';
+    });
+  }
+  block('Plans',  r.lines.filter(function(l){ return l.type==='plan' || l.type==='over'; }));
+  block('Add-ons', r.lines.filter(function(l){ return l.type==='addon'; }));
+  block('WhatsApp broadcast', r.lines.filter(function(l){ return l.type==='bcast'; }));
+  if(!r.lines.length) h += '<div class="q-empty">Nothing selected yet.</div>';
+
+  h += '<div class="q-line sum"><span class="k">Subtotal, excl. GST</span><span class="q-val">' + inr(r.net) + '</span></div>';
+  h += '<div class="q-line"><span class="k">GST at 18%</span><span class="q-val">' + inr(r.gst) + '</span></div>';
+  h += '<div class="q-line tot"><span class="k">Total</span><span class="q-val">' + inr(r.grand) + '</span></div>';
+
+  var cells = [];
+  ['voice','chat'].forEach(function(p){
+    if(r.eff[p] === null) return;
+    cells.push('<div class="q-eff-c"><div class="q-eff-v">₹' + dec(r.eff[p]) + '</div><div class="q-eff-k">Effective / ' + PKG[p].short + '</div></div>');
+  });
+  if(cells.length) h += '<div class="q-eff">' + cells.join('') + '</div>';
+
+  if(r.net > 0 && r.qtrEquiv < MIN_ENGAGEMENT_QTR){
+    h += '<div class="call warn" style="margin-top:22px"><span class="m">!</span><span>Below the <b>' + inr(MIN_ENGAGEMENT_QTR) +
+      ' per quarter</b> minimum engagement. This sits at ' + inr(r.qtrEquiv) + ' quarterly-equivalent — size it up or route it for an exception.</span></div>';
+  }
+  if(activeKeys().some(function(p){ return pkgOf(p).ent; }) && S.cadence==='qtr'){
+    h += '<div class="call info" style="margin-top:22px"><span class="m">→</span><span>Enterprise is an <b>annual commitment</b> — switch the cadence before this goes out.</span></div>';
+  }
+  $('qBody').innerHTML = h;
+}
+
+function render(){
+  var r = compute();
+  renderProds();
+  ['voice','chat'].forEach(function(p){ renderPks(p); renderSpecs(p); });
+  renderTags(); renderHints(); renderConc(); renderAddons(); renderBcast(); renderQuote(r);
+  qsa('#cad button').forEach(function(b){ b.classList.toggle('on', b.dataset.c === S.cadence); });
+  maybeRegen();
+}
+
+function softRender(active){
+  var r = compute();
+  renderProds();
+  ['voice','chat'].forEach(function(p){ renderPks(p); renderSpecs(p); });
+  renderTags(); renderHints(); renderConc(); renderQuote(r);
+  if(active && active.dataset.addon){
+    active.closest('.item').classList.toggle('on', (parseFloat(active.value)||0) > 0);
+    syncAddonHead();
+  } else renderAddons();
+  if(active && active.dataset.bcast){
+    active.closest('.item').classList.toggle('on', (parseFloat(active.value)||0) > 0);
+    $('clearBcast').hidden = bcastCount() === 0;
+  } else renderBcast();
+  maybeRegen();
+}
+
+/* ═══════════ QUOTE TEXT ═══════════ */
+
+function quoteText(){
+  var r = compute(), t = r.t, L = [];
+  L.push('AUXY AI — COMMERCIAL SUMMARY');
+  L.push('Rate card V7 · ' + t.billed.toLowerCase() + ' · all figures in INR');
+  L.push('');
+  r.lines.forEach(function(l){ L.push(l.label); L.push('  ' + l.sub); L.push('  ' + inr(l.amount)); L.push(''); });
+  L.push('Subtotal, excl. GST: ' + inr(r.net));
+  L.push('GST at 18%: ' + inr(r.gst));
+  L.push('Total, ' + t.billed.toLowerCase() + ': ' + inr(r.grand));
+  L.push('');
+  ['voice','chat'].forEach(function(p){
+    if(r.eff[p] !== null) L.push('Effective per ' + PKG[p].word + ': ₹' + dec(r.eff[p]));
+  });
+  L.push('');
+  L.push('Terms: ' + (S.cadence==='ann' ? 'Annual pays twelve months and runs thirteen.' : 'Billed quarterly.') +
+    ' Overage bills at the plan rate with no premium pack. Unused volume carries forward within the term. All prices exclusive of 18% GST.');
+  return L.join('\n');
+}
+
+/* ═══════════ EMAIL ═══════════ */
+
+function joinAnd(a){
+  if(a.length <= 1) return a.join('');
+  if(a.length === 2) return a[0] + ' and ' + a[1];
+  return a.slice(0,-1).join(', ') + ', and ' + a[a.length-1];
+}
+
+function productBlock(p, r){
+  var d = r.detail[p], pk = d.pk, cfg = d.cfg, B = [];
+  B.push(p==='voice' ? 'VOICE AI' : 'CHAT AI');
+  B.push('• Plan: ' + pk.name + (pk.ent ? ' (Enterprise quote)' : '') + '.');
+  B.push('• Volume: ' + num(d.committed) + (pk.ent?'+':'') + ' ' + cfg.unitLong + '.');
+  B.push('• Rate: ₹' + dec(d.rate) + ' per ' + cfg.word + ' — flat, the same at every package.');
+  if(p === 'voice') B.push('• Concurrency: ' + pk.conc + (pk.ent?'+':'') + ' concurrent call' + (pk.conc===1?'':'s') + ', telephony and AI together.');
+  if(S.cadence === 'qtr'){
+    B.push('• Billing: ' + inr(d.planCost) + ', billed quarterly.');
+  } else {
+    B.push('• Billing: ' + inr(d.planCost) + ', billed annually — you pay for twelve months and receive thirteen months of service, an effective ₹' +
+           dec(d.rate * 12 / 13) + ' per ' + cfg.word + '.');
+  }
+  if(d.overUnits > 0){
+    B.push('• Projected overage: ' + num(d.overUnits) + ' ' + cfg.unit + ' beyond the ' + num(d.allowance) +
+           ' ' + cfg.unit + ' allowance, at the same ₹' + dec(d.rate) + ' (' + inr(d.overCost) + ').');
+  }
+  if(pk.ent) B.push('  Note: Enterprise pricing is custom-quoted against your exact volume and requirements — the rate above is indicative, final terms confirmed together.');
+  return B.join('\n');
+}
+
+function buildEmail(){
+  var r = compute(), t = r.t, keys = activeKeys();
+  var client  = val('clientName')  || '[Client Name]';
+  var company = val('companyName') || '[Company Name]';
+  var repName = val('repName')     || '[Your Name]';
+  var repMail = val('repEmail')    || 'ajinkyav@auxy.ai';
+  var docs = val('docsLink'), trust = val('trustLink');
+  var b = '';
+
+  b += 'Hi ' + client + ',\n\n';
+  b += 'Thanks for the time earlier — really enjoyed the conversation.\n\n';
+  b += 'I’ve also attached our product deck for your reference, which gives an overview of Auxy AI.\n\n';
+  b += 'Based on our discussion, here is the proposed scope and pricing:\n\n';
+
+  keys.forEach(function(p){ b += productBlock(p, r) + '\n\n'; });
+
+  if(checked('optMetering')){
+    if(keys.indexOf('voice') !== -1){
+      b += 'HOW VOICE MINUTES ARE COUNTED\n';
+      b += 'Inbound and outbound calls bill at the same per-minute rate, and telephony is included — there is no separate carrier bill. ';
+      b += 'A call under 6 seconds is never billed. From 6 to 30 seconds bills as half a minute, 31 to 60 seconds as one minute, ';
+      b += 'and anything past a minute rounds up to the next whole minute. Billing starts when the call connects and stops when it disconnects; ';
+      b += 'ringing time and unanswered calls are never billed, in either direction.\n\n';
+    }
+    if(keys.indexOf('chat') !== -1){
+      b += 'HOW CHAT CONVERSATIONS ARE COUNTED\n';
+      b += 'A conversation is a 24-hour window with one contact, billed only once it reaches six or more total messages, counting yours and the AI’s together. ';
+      b += 'A visitor who opens the widget, reads a greeting and leaves is never billed, and length beyond that never changes the charge — one conversation, one rate. ';
+      b += 'The same rule applies on website and WhatsApp alike, and it is checkable directly against your own message logs.\n\n';
+    }
+  }
+
+  if(checked('optPilot')){
+    var bits = [];
+    if(keys.indexOf('voice') !== -1) bits.push('100 free voice minutes');
+    if(keys.indexOf('chat')  !== -1) bits.push('50 free conversations');
+    if(bits.length){
+      b += 'PILOT OFFER\n• ' + joinAnd(bits) + ', complimentary across a 14-day pilot — before any commercial commitment.\n\n';
+    }
+  }
+
+  if(r.addonDetail.length){
+    b += 'ADD-ONS\n';
+    r.addonDetail.forEach(function(a){
+      b += '• ' + a.label + ': ' + a.qty + ' × ₹' + num(a.price) + ' per ' + a.unit + ' / month = ' + inr(a.amount) + ' for the ' + t.noun + '.\n';
+    });
+    b += '\n';
+  }
+
+  if(r.bcastDetail.length){
+    b += 'WHATSAPP BROADCAST\n';
+    r.bcastDetail.forEach(function(x){
+      b += '• ' + x.name + ': ₹' + dec(x.price,4) + ' per send — ' + num(x.qty) + ' sends a month (' + inr(x.amount) + ' for the ' + t.noun + ').\n';
+    });
+    b += 'These are Meta’s own template charges, passed through at cost with zero platform markup. They sit outside the per-conversation rate.\n\n';
+  }
+
+  if(checked('optSummary')){
+    b += 'PRICING SUMMARY\n';
+    if(r.productNet > 0) b += '• Plans: ' + inr(r.productNet) + '.\n';
+    if(r.addonNet  > 0)  b += '• Add-ons: ' + inr(r.addonNet) + '.\n';
+    if(r.bcastNet  > 0)  b += '• WhatsApp broadcast: ' + inr(r.bcastNet) + '.\n';
+    b += '• Subtotal (excl. GST): ' + inr(r.net) + '.\n';
+    b += '• GST (18%): ' + inr(r.gst) + '.\n';
+    b += '• Total, ' + t.billed.toLowerCase() + ': ' + inr(r.grand) + '.\n\n';
+  }
+
+  if(checked('optIncluded')){
+    var inc = ['tailored AI agents', 'custom actions and workflows'];
+    if(keys.indexOf('voice') !== -1) inc.push('telephony inbound and outbound', 'call recordings');
+    if(keys.indexOf('chat')  !== -1) inc.push('omnichannel coverage across website and WhatsApp', 'lifetime chat history', 'leads auto-tagging');
+    inc.push('all API integrations and webhooks', 'role-based access control', 'advanced analytics');
+    b += 'WHAT’S INCLUDED\n';
+    b += 'This engagement includes ' + joinAnd(inc) + '. You will also have onboarding and agent configuration, ';
+    b += 'along with hands-on support from our Customer Success and Implementation teams. There is no separate implementation fee.\n\n';
+  }
+
+  if(checked('optBehaviour')){
+    var rates = keys.map(function(p){ return '₹' + dec(r.detail[p].rate) + ' per ' + PKG[p].word; });
+    b += 'HOW THE PLAN BEHAVES\n';
+    b += 'Unused volume carries forward within the term, so a slow month is banked rather than lost and the plan can be sized to the ' + t.noun + ' rather than to the worst month. ';
+    b += 'Anything past the allowance bills at the same ' + joinAnd(rates) + ' — there is no premium overage rate, no top-up pack pricing, and no penalty tier for a campaign month or a seasonal surge.\n\n';
+  }
+
+  b += 'We are happy to revisit pricing as your volume grows.\n\n';
+  b += 'All prices are exclusive of GST.\n\n';
+  b += 'Should you have any questions in the meantime, please feel free to reach out to me.\n\n';
+  if(docs)  b += 'Documentation: ' + docs + '\n';
+  if(trust) b += 'Trust Center: ' + trust + '\n';
+  if(docs || trust) b += '\n';
+  b += 'Best,\n' + repName + '\nAuxy AI\n' + repMail;
+
+  return { subject: company + ' — Auxy AI pricing & next steps', body:b };
+}
+
+function generateEmail(){
+  if(!activeKeys().length){ toast('Select Voice or Chat on the Calculator tab first'); return; }
+  var e = buildEmail();
+  $('emailSubject').value = e.subject;
+  $('emailBody').value = e.body;
+  emailDirty = false;
+  $('mailState').textContent = 'Generated from the current calculator state · ' + term().billed.toLowerCase() + '.';
+}
+function maybeRegen(){
+  if(!emailDirty && $('emailBody') && $('emailBody').value.trim() !== '') generateEmail();
+}
+
+/* ═══════════ PLUMBING ═══════════ */
+
+function toast(msg){
+  var el = $('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('show'); }, 2000);
+}
+function copyText(txt, msg){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ toast(msg); }, function(){ fallbackCopy(txt,msg); });
+  } else fallbackCopy(txt, msg);
+}
+function fallbackCopy(txt, msg){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast(msg); } catch(e){ toast('Copy failed — select the text manually'); }
+  document.body.removeChild(ta);
+}
+
+document.addEventListener('click', function(e){
+  var el;
+  if((el = e.target.closest('#tabs button'))){
+    S.tab = el.dataset.t;
+    qsa('#tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t === S.tab); });
+    $('panel-calc').classList.toggle('on', S.tab==='calc');
+    $('panel-email').classList.toggle('on', S.tab==='email');
+    document.body.classList.toggle('on-email', S.tab==='email');
+    if(S.tab==='email' && $('emailBody').value.trim()==='') generateEmail();
+    return;
+  }
+  if((el = e.target.closest('#cad button'))){ S.cadence = el.dataset.c; render(); return; }
+  if((el = e.target.closest('#prods .prod'))){ S.on[el.dataset.p] = !S.on[el.dataset.p]; render(); return; }
+  if((el = e.target.closest('.pk'))){
+    var p = el.dataset.p;
+    S.pkg[p] = el.dataset.k;
+    var pk = pkgOf(p);
+    S.vol[p] = pk.vol; S.use[p] = pk.vol;
+    $(p==='voice'?'voiceVol':'chatVol').value = pk.vol;
+    $(p==='voice'?'voiceUse':'chatUse').value = pk.vol;
+    render(); return;
+  }
+  if((el = e.target.closest('#concMode button'))){ S.concMode = el.dataset.m; render(); return; }
+  if((el = e.target.closest('[data-step]'))){
+    var id = el.dataset.id;
+    S.addons[id] = Math.max(0, (S.addons[id]||0) + parseInt(el.dataset.step,10));
+    render(); return;
+  }
+  if(e.target.closest('#resetAddons')){ S.addons = Object.assign({}, ZERO_ADDONS); render(); toast('Add-ons reset to zero'); return; }
+  if(e.target.closest('#clearBcast')){ S.bcast = Object.assign({}, ZERO_BCAST); render(); toast('Broadcast sends cleared'); return; }
+  if(e.target.closest('#copyQuote')){ copyText(quoteText(), 'Quote summary copied'); return; }
+  if(e.target.closest('#printBtn')){ window.print(); return; }
+  if(e.target.closest('#mobarBtn')){ $('qBody').scrollIntoView({behavior:'smooth', block:'center'}); return; }
+  if(e.target.closest('#generateBtn') || e.target.closest('#regenBtn')){ generateEmail(); toast('Email generated'); return; }
+  if(e.target.closest('#copyEmail')){ copyText('Subject: ' + $('emailSubject').value + '\n\n' + $('emailBody').value, 'Email copied'); return; }
+  if(e.target.closest('#mailtoBtn')){
+    window.location.href = 'mailto:' + encodeURIComponent(val('clientEmail')) +
+      '?subject=' + encodeURIComponent($('emailSubject').value) + '&body=' + encodeURIComponent($('emailBody').value);
+    return;
+  }
+});
+
+document.addEventListener('input', function(e){
+  var el = e.target;
+  if(el.id === 'emailBody' || el.id === 'emailSubject'){
+    emailDirty = true;
+    $('mailState').textContent = 'Edited by hand — Regenerate will overwrite your changes.';
+    return;
+  }
+  if(['clientName','companyName','clientEmail','repName','repEmail','docsLink','trustLink'].indexOf(el.id) !== -1){ maybeRegen(); return; }
+
+  var v = parseFloat(el.value);
+  if(!isFinite(v)) v = 0;
+
+  if(el.id === 'voiceVol'){ S.vol.voice = v; syncPkg('voice'); }
+  else if(el.id === 'chatVol'){ S.vol.chat = v; syncPkg('chat'); }
+  else if(el.id === 'voiceUse'){ S.use.voice = v; }
+  else if(el.id === 'chatUse'){ S.use.chat = v; }
+  else if(el.id === 'peakCalls'){ S.peakCalls = v; }
+  else if(el.id === 'avgLen'){ S.avgLen = v; }
+  else if(el.dataset.addon){ S.addons[el.dataset.addon] = Math.max(0, v); }
+  else if(el.dataset.bcast){ S.bcast[el.dataset.bcast] = Math.max(0, v); }
+  else return;
+
+  softRender(el);
+});
+
+document.addEventListener('change', function(e){ if(e.target.type === 'checkbox') maybeRegen(); });
+
+/* Prefill client and rep fields from the query string, so a CRM lead link lands ready.
+   Accepts the same aliases the previous deployment did, so existing links keep working. */
+function prefillFromQuery(){
+  var qs;
+  try { qs = new URLSearchParams(window.location.search); } catch(e){ return 0; }
+  var map = {
+    clientName:  ['clientName','client_name','name','leadName','lead_name'],
+    companyName: ['companyName','company_name','company','organisation','organization'],
+    clientEmail: ['clientEmail','client_email','email'],
+    repName:     ['repName','rep_name','assignedTo','assigned_to','agent','lead_assignee'],
+    repEmail:    ['repEmail','rep_email','agentEmail','assignee_email'],
+    docsLink:    ['docsLink','docs_link'],
+    trustLink:   ['trustLink','trust_link']
+  };
+  var filled = 0;
+  Object.keys(map).forEach(function(id){
+    var el = $(id); if(!el) return;
+    for(var i=0;i<map[id].length;i++){
+      var v = qs.get(map[id][i]);
+      if(v === null) continue;
+      v = String(v).trim();
+      // Unreplaced CRM merge tags such as {{Name}} arrive literally — ignore them.
+      if(!v || /^\{\{.*\}\}$/.test(v) || /^%7B%7B/i.test(v)) continue;
+      el.value = v; filled++; break;
+    }
+  });
+  return filled;
+}
+
+function syncPkg(p){
+  var l = PKG[p].list, i;
+  for(i=0;i<l.length;i++) if(l[i].vol === S.vol[p]){ S.pkg[p] = l[i].k; return; }
+}
+
+render();
+
+var prefilled = prefillFromQuery();
+if(prefilled){
+  generateEmail();
+  toast(prefilled + ' lead detail' + (prefilled===1?'':'s') + ' loaded from the link');
+}
+})();
+</script>
+</body>
+</html>
